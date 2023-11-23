@@ -17,16 +17,20 @@ export type TDriverMasterParam = {
 }
 
 export type TDriverMasterHandle = {
-    generateKey?: (keyRaw?: TDataKey, payLoad?: any) => TDataKey,
-    generateFileName?: (key?: TDataKey, payLoad?: any) => string,
-    generateFileSubdir?: (key?: TDataKey, payLoad?: any) => string,
+    generateKey?: (keyRaw?: TDataKey, payLoad?: any) => {keyRaw: TDataKey, key: TDataKey},
+    generateFileName?: (keyRaw?: TDataKey, payLoad?: any) => string,
+    generateFileSubdir?: (keyRaw?: TDataKey, payLoad?: any) => string,
+    getFileFromKey?: (key: TDataKey) => string,
+    getSubdirFromKey?: (key: TDataKey) => string
 }
 
 export enum EnumQuery {
     insert = 'insert',
     update = 'update',
     upsert = 'upsert',
-    delete = 'delete'
+    delete = 'delete',
+    loadByFile = 'loadByFile',
+    loadByFilter = 'loadByFilter'
 }
 
 export type TDataKey = string
@@ -41,17 +45,43 @@ export type TData = {
     payload: any
 }
 
+export type TPosition = {
+    file: string,
+    subdir: string
+}
+
+export type TStamp = {
+    data: TData,
+    position: TPosition
+}
+
+export type TQueryInsert = { kind: EnumQuery.insert, payLoad: any }
+export type TQueryUpdate = { kind: EnumQuery.update, payLoad: any, key: TDataKey }
+export type TQueryUpsert = { kind: EnumQuery.upsert, payLoad: any, key: TDataKey }
+export type TQueryDelete = { kind: EnumQuery.delete, key: TDataKey }
+export type TQueryLoadByKey = { kind: EnumQuery.loadByFile, key: TDataKey[] }
+
 export type TQuery =
-    { kind: EnumQuery.insert, payLoad: any } |
-    { kind: EnumQuery.update, payLoad: any, key: string } |
-    { kind: EnumQuery.upsert, payLoad: any, key: string } |
-    { kind: EnumQuery.delete, key: string }
+    TQueryInsert |
+    TQueryUpdate |
+    TQueryUpsert |
+    TQueryDelete |
+    TQueryLoadByKey
+
+export type TResultTemplate = {kind: EnumQuery, key: TQueryKey, error?: string}
+
+export type TResultInsert = TResultTemplate & { kind: EnumQuery.insert, stamp: TStamp }
+export type TResultUpdate = TResultTemplate & { kind: EnumQuery.update, stamp: TStamp }
+export type TResultUpsert = TResultTemplate & { kind: EnumQuery.upsert, stamp: TStamp }
+export type TResultDelete = TResultTemplate & { kind: EnumQuery.delete, stamp: TStamp }
+export type TResultLoadByFile = TResultTemplate & { kind: EnumQuery.loadByFile, stamp: TStamp[] }
 
 export type TResult =
-    { kind: EnumQuery.insert, key: TQueryKey, error?: string, data: TData } |
-    { kind: EnumQuery.update, key: TQueryKey, error?: string, data: TData } |
-    { kind: EnumQuery.upsert, key: TQueryKey, error?: string, data: TData } |
-    { kind: EnumQuery.delete, key: TQueryKey, error?: string }
+    TResultInsert |
+    TResultUpdate |
+    TResultUpsert |
+    TResultDelete |
+    TResultLoadByFile
 
 export type TQueryKey = string
 
@@ -64,67 +94,7 @@ export class DriverMaster {
     private _numeratorQueue = new NumeratorIncrement()
     private _worker = [] as TWorker[]
     private _resultQueue = [] as { result: TResult, isUsed: boolean }[]
-    private _timerClearResultQueue = new vv.Timer(3000, () => {
-        this._resultQueue = this._resultQueue.filter(f => !f.isUsed)
-        this._timerClearResultQueue.nextTick(3000)
-    })
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private _execOne(query: TQuery): TQueryKey {
-        throw new Error ('not connected')
-    }
-
-    constructor(handle?: TDriverMasterHandle) {
-        this._handle = handle
-    }
-
-    public connect(param: TDriverMasterParam) {
-        if (this._connected) return
-        this._connected = true
-
-        this._param = {
-            dir: vv.toString(param?.dir),
-            concurrency: (vv.toString(param?.concurrency) as EnumConcurrency) || EnumConcurrency.distributed,
-            countWorker: vv.toIntPositive(param?.countWorker) || 8
-        }
-
-        const workerData = {
-            dir: {
-                data: path.join(this._param.dir, 'data'),
-                index: path.join(this._param.dir, 'index'),
-                process: path.join(this._param.dir, '.process'),
-            },
-            concurrency: this._param.concurrency,
-            handle: {
-                generateKey: this._handle?.generateKey,
-                generateFileName: this._handle?.generateFileName,
-                generateFileSubdir: this._handle?.generateFileSubdir
-            }
-        } as TDriverWorkerData
-
-        fs.ensureDirSync(workerData.dir.data)
-        fs.ensureDirSync(workerData.dir.index)
-        fs.ensureDirSync(workerData.dir.process)
-
-        for (let i = 0; i < this._param.countWorker; i++) {
-            const worker = new Worker(path.join(__dirname, './driverWorker.js'), { workerData })
-            worker.on('message', (result: TResult) => {
-                this._resultQueue.push({ result, isUsed: false })
-            })
-            this._worker.push({
-                worker,
-                queueCount: 0
-            })
-        }
-
-        this._execOne = (query: TQuery): TQueryKey => {
-            const w = this._findWorker(query.kind)
-            const queueKey = this._numeratorQueue.getId()
-            w.queueCount++
-            w.worker.postMessage({ queueKey, query })
-            return queueKey
-        }
-    }
+    private _timerClearResultQueue = undefined as vv.Timer
 
     private _findWorker(queryKind: EnumQuery): TWorker {
         if (this._param.countWorker === 1) {
@@ -144,8 +114,71 @@ export class DriverMaster {
         return fndWorker
     }
 
+    private _checkWork() {
+        if (!this._connected) {
+            throw new Error ('not connected')
+        }
+    }
+
+    constructor(handle?: TDriverMasterHandle) {
+        this._handle = handle
+    }
+
+    public connect(param: TDriverMasterParam) {
+        if (this._connected) return
+
+        this._param = {
+            dir: vv.toString(param?.dir),
+            concurrency: (vv.toString(param?.concurrency) as EnumConcurrency) || EnumConcurrency.distributed,
+            countWorker: vv.toIntPositive(param?.countWorker) || 8
+        }
+
+        const workerData = {
+            dir: {
+                data: path.join(this._param.dir, 'data'),
+                index: path.join(this._param.dir, 'index'),
+                process: path.join(this._param.dir, '.process'),
+            },
+            concurrency: this._param.concurrency,
+            handle: {
+                generateKey: this._handle?.generateKey?.toString(),
+                generateFileName: this._handle?.generateFileName?.toString(),
+                generateFileSubdir: this._handle?.generateFileSubdir?.toString(),
+                getFileFromKey: this._handle?.getFileFromKey?.toString(),
+                getSubdirFromKey: this._handle?.getSubdirFromKey?.toString(),
+            }
+        } as TDriverWorkerData
+
+        fs.ensureDirSync(workerData.dir.data)
+        fs.ensureDirSync(workerData.dir.index)
+        fs.ensureDirSync(workerData.dir.process)
+
+        for (let i = 0; i < this._param.countWorker; i++) {
+            const worker = new Worker(path.join(__dirname, './driverWorker.js'), { workerData })
+            worker.on('message', (result: TResult) => {
+                this._resultQueue.push({ result, isUsed: false })
+            })
+            this._worker.push({
+                worker,
+                queueCount: 0
+            })
+        }
+
+        this._timerClearResultQueue = new vv.Timer(3000, () => {
+            this._resultQueue = this._resultQueue.filter(f => !f.isUsed)
+            this._timerClearResultQueue.nextTick(3000)
+        })
+
+        this._connected = true
+    }
+
     public execOne(query: TQuery): TQueryKey {
-        return this._execOne(query)
+        this._checkWork()
+        const w = this._findWorker(query.kind)
+        const queueKey = this._numeratorQueue.getId()
+        w.queueCount++
+        w.worker.postMessage({ queueKey, query })
+        return queueKey
     }
 
     public checkResult(queryKey: TQueryKey): TResult {
