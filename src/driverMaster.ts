@@ -4,24 +4,11 @@ import * as fs from 'fs-extra'
 import { Worker } from 'worker_threads'
 import { NumeratorIncrement } from './numerator'
 import { TDriverWorkerData } from './driverWorker'
-
-export enum EnumConcurrency {
-    exclusive = 'exclusive',
-    distributed = 'distributed',
-}
+import { TDriverHandle } from './driverHandle'
 
 export type TDriverMasterParam = {
     dir: string,
-    concurrency?: EnumConcurrency,
     countWorker?: number
-}
-
-export type TDriverMasterHandle = {
-    generateKey?: (keyRaw?: TDataKey, payLoad?: any) => {keyRaw: TDataKey, key: TDataKey},
-    generateFileName?: (keyRaw?: TDataKey, payLoad?: any) => string,
-    generateFileSubdir?: (keyRaw?: TDataKey, payLoad?: any) => string,
-    getFileFromKey?: (key: TDataKey) => string,
-    getSubdirFromKey?: (key: TDataKey) => string
 }
 
 export enum EnumQuery {
@@ -89,7 +76,7 @@ type TWorker = { worker: Worker, queueCount: number }
 
 export class DriverMaster {
     private _connected = false
-    private _handle = undefined as TDriverMasterHandle
+    private _handle = undefined as TDriverHandle
     private _param = undefined as TDriverMasterParam
     private _numeratorQueue = new NumeratorIncrement()
     private _worker = [] as TWorker[]
@@ -120,7 +107,8 @@ export class DriverMaster {
         }
     }
 
-    constructor(handle?: TDriverMasterHandle) {
+    constructor(handle?: TDriverHandle) {
+        //SetGenerateKey(handle?.generateKey)
         this._handle = handle
     }
 
@@ -129,7 +117,6 @@ export class DriverMaster {
 
         this._param = {
             dir: vv.toString(param?.dir),
-            concurrency: (vv.toString(param?.concurrency) as EnumConcurrency) || EnumConcurrency.distributed,
             countWorker: vv.toIntPositive(param?.countWorker) || 8
         }
 
@@ -139,7 +126,6 @@ export class DriverMaster {
                 index: path.join(this._param.dir, 'index'),
                 process: path.join(this._param.dir, '.process'),
             },
-            concurrency: this._param.concurrency,
             handle: {
                 generateKey: this._handle?.generateKey?.toString(),
                 generateFileName: this._handle?.generateFileName?.toString(),

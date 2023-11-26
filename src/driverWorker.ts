@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { workerData, parentPort } from 'worker_threads'
 import * as vv from 'vv-common'
-import path from 'path'
-import fs, { exists } from 'fs-extra'
-import { EnumConcurrency, EnumQuery, TData, TDataKey, TQuery, TQueryInsert, TQueryKey, TQueryUpdate, TResult, TResultInsert, TResultTemplate, TResultUpdate } from './driverMaster'
+import * as path from 'path'
+import * as fs from 'fs-extra'
+import { EnumQuery, TData, TDataKey, TQuery, TQueryInsert, TQueryKey, TQueryUpdate, TResult, TResultInsert, TResultTemplate, TResultUpdate } from './driverMaster'
 import { NumeratorUuid } from './numerator'
+import { DriverHandle } from './driverHandle'
+
 
 export type TDriverWorkerData = {
     dir: {
@@ -11,7 +14,6 @@ export type TDriverWorkerData = {
         index: string,
         process: string,
     },
-    concurrency: EnumConcurrency,
     handle: {
         generateKey: string
         generateFileName: string
@@ -27,86 +29,42 @@ const env = {
     queryQueue: [] as { queueKey: TQueryKey, query: TQuery }[]
 }
 
-const handle = {
-    generateKey: env.workerData.handle.generateKey
-        ? ((payLoad?: any) => {
-            const sf = `function ${env.workerData.handle.generateKey.substring(env.workerData.handle.generateKey.indexOf('('))}`
-            const f = new Function(`return ${sf}`)()
-            return f(env.uuid.getId(), payLoad) as { keyRaw: TDataKey, key: TDataKey }
-        })
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        : ((payLoad?: any) => {
-            const keyRaw = env.uuid.getId()
-            return { keyRaw: env.uuid.getId(), key: keyRaw }
-        }),
-    generateFileName: env.workerData.handle.generateFileName
-        ? ((key?: TDataKey, payLoad?: any) => {
-            const sf = `function ${env.workerData.handle.generateFileName.substring(env.workerData.handle.generateKey.indexOf('('))}`
-            const f = new Function(`return ${sf}`)()
-            return f(key, payLoad) as string
-        })
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        : ((key?: TDataKey, payLoad?: any) => {
-            return `${key}.json` as string
-        }),
-    generateFileSubdir: env.workerData.handle.generateFileSubdir
-        ? ((key?: TDataKey, payLoad?: any) => {
-            const sf = `function ${env.workerData.handle.generateFileSubdir.substring(env.workerData.handle.generateKey.indexOf('('))}`
-            const f = new Function(`return ${sf}`)()
-            return f(key, payLoad) as string
-        })
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        : ((key?: TDataKey, payLoad?: any) => {
-            return path.join(...key.substring(0, 4)) as string
-        }),
-    getFileFromKey: env.workerData.handle.getFileFromKey
-    ? ((key: TDataKey) => {
-        const sf = `function ${env.workerData.handle.getFileFromKey.substring(env.workerData.handle.generateKey.indexOf('('))}`
-        const f = new Function(`return ${sf}`)()
-        return f(key) as string
-    })
-    : ((key: TDataKey) => {
-        return `${key}.json` as string
-    }),
-    getSubdirFromKey: env.workerData.handle.getSubdirFromKey
-    ? ((key: TDataKey) => {
-        const sf = `function ${env.workerData.handle.getSubdirFromKey.substring(env.workerData.handle.generateKey.indexOf('('))}`
-        const f = new Function(`return ${sf}`)()
-        return f(key) as string
-    })
-    : ((key: TDataKey) => {
-        return path.join(...key.substring(0, 4)) as string
-    }),
-    queryQueueProcess: (calback: () => void) => {
-        const queryQueue = env.queryQueue.shift()
-        if (!queryQueue) {
-            calback()
-            return
-        }
+const handle = new DriverHandle()
+handle.setGenerateKey(env.workerData.handle?.generateKey?.toString())
+handle.setGenerateFileName(env.workerData.handle?.generateFileName)
+handle.setGenerateFileSubdir(env.workerData.handle?.generateFileSubdir)
+handle.setGetFileFromKey(env.workerData.handle?.getFileFromKey)
+handle.setGetSubdirFromKey(env.workerData.handle?.getSubdirFromKey)
 
-        const result = {
-            kind: queryQueue.query.kind,
-            key: queryQueue.queueKey,
-            error: undefined,
-        } as TResultTemplate
+function queryQueueProcess (calback: () => void) {
+    const queryQueue = env.queryQueue.shift()
+    if (!queryQueue) {
+        calback()
+        return
+    }
 
-        if (queryQueue.query.kind === EnumQuery.insert) {
-            onQueryInsert(result as TResultInsert, queryQueue.query, (result) => {
-                result.key = queryQueue.queueKey
-                parentPort.postMessage(result)
-                handle.queryQueueProcess(calback)
-            })
-        } else if (queryQueue.query.kind === EnumQuery.update) {
-            onQueryUpdate(result as TResultUpdate, queryQueue.query, (result) => {
-                result.key = queryQueue.queueKey
-                parentPort.postMessage(result)
-                handle.queryQueueProcess(calback)
-            })
-        } else {
-            result.error = `unknown kind "${queryQueue.query.kind}"`
-            parentPort.postMessage(result as TResult)
-            handle.queryQueueProcess(calback)
-        }
+    const result = {
+        kind: queryQueue.query.kind,
+        key: queryQueue.queueKey,
+        error: undefined,
+    } as TResultTemplate
+
+    if (queryQueue.query.kind === EnumQuery.insert) {
+        onQueryInsert(result as TResultInsert, queryQueue.query, (result) => {
+            result.key = queryQueue.queueKey
+            parentPort.postMessage(result)
+            queryQueueProcess(calback)
+        })
+    } else if (queryQueue.query.kind === EnumQuery.update) {
+        onQueryUpdate(result as TResultUpdate, queryQueue.query, (result) => {
+            result.key = queryQueue.queueKey
+            parentPort.postMessage(result)
+            queryQueueProcess(calback)
+        })
+    } else {
+        result.error = `unknown kind "${queryQueue.query.kind}"`
+        parentPort.postMessage(result as TResult)
+        queryQueueProcess(calback)
     }
 }
 
@@ -115,7 +73,7 @@ parentPort.on('message', (message: { queueKey: TQueryKey, query: TQuery }) => {
 })
 
 const timer = new vv.Timer(50, () => {
-    handle.queryQueueProcess(() => {
+    queryQueueProcess(() => {
         timer.nextTick(50)
     })
 })
