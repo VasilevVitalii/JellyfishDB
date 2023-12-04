@@ -1,22 +1,28 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vv from 'vv-common'
-import { TDataKey } from "./driverMaster"
 import { NumeratorUuid } from "./numerator"
 import { transpile } from "typescript"
 import { join } from 'path'
+import { TDataKey } from '.'
 
 type TDriverHandleGenerateKey = (keyRaw?: TDataKey, payLoad?: any) => string
 type TDriverHandleGenerateFileName = (keyRaw?: TDataKey, payLoad?: any) => string
 type TDriverHandleGenerateFileSubdir = (keyRaw?: TDataKey, payLoad?: any) => string
 type TDriverHandleGetFileFromKey = (key: TDataKey) => string
 type TDriverHandleGetSubdirFromKey = (key: TDataKey) => string
+type TDriverHandleGetSubdirVerify   = (subdir: string) => boolean
+type TDriverHandleCacheInsert = (payLoad: any, cache: any[]) => void
+type TDriverHandleCacheUpdate = (payLoad: any, cache: any[]) => void
 
 export type TDriverHandle = {
     generateKey?: TDriverHandleGenerateKey,
     generateFileName?: TDriverHandleGenerateFileName,
     generateFileSubdir?: TDriverHandleGenerateFileSubdir,
     getFileFromKey?: TDriverHandleGetFileFromKey,
-    getSubdirFromKey?: TDriverHandleGetSubdirFromKey
+    getSubdirFromKey?: TDriverHandleGetSubdirFromKey,
+    getSubdirVerify?: TDriverHandleGetSubdirVerify,
+    cacheInsert?: TDriverHandleCacheInsert,
+    cacheUpdate?: TDriverHandleCacheUpdate,
 }
 
 export class DriverHandle {
@@ -25,9 +31,13 @@ export class DriverHandle {
     private _generateFileSubdir = undefined as TDriverHandleGenerateFileSubdir
     private _getFileFromKey = undefined as TDriverHandleGetFileFromKey
     private _getSubdirFromKey = undefined as TDriverHandleGetSubdirFromKey
+    private _getSubdirVerify = undefined as TDriverHandleGetSubdirVerify
+    private _cacheInsert = undefined as TDriverHandleCacheInsert
+    private _cacheUpdate = undefined as TDriverHandleCacheUpdate
 
     private _uuid = new NumeratorUuid()
     private _prefix = [`import * as path from 'path'`]
+    private _defaultSubdir = RegExp(/^[0-9][/|\\][0-9][/|\\][0-9][/|\\][0-9]$/)
 
     public setGenerateKey(func?: string) {
         if (func) {
@@ -47,7 +57,7 @@ export class DriverHandle {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
             this._generateFileName = (keyRaw: TDataKey, payLoad?: any) => {
-                return vv.toString(f(keyRaw, payLoad)) as TDataKey
+                return vv.toString(f(keyRaw, payLoad)) as string
             }
         } else {
             this._generateFileName = (keyRaw: TDataKey) => {
@@ -60,7 +70,7 @@ export class DriverHandle {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
             this._generateFileSubdir = (keyRaw: TDataKey, payLoad?: any) => {
-                return vv.toString(f(keyRaw, payLoad)) as TDataKey
+                return vv.toString(f(keyRaw, payLoad)) as string
             }
         } else {
             this._generateFileSubdir = (keyRaw: TDataKey) => {
@@ -73,7 +83,7 @@ export class DriverHandle {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
             this._getFileFromKey = (key: TDataKey) => {
-                return vv.toString(f(key)) as TDataKey
+                return vv.toString(f(key)) as string
             }
         } else {
             this._getFileFromKey = (key: TDataKey) => {
@@ -86,11 +96,48 @@ export class DriverHandle {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
             this._getSubdirFromKey = (key: TDataKey) => {
-                return vv.toString(f(key)) as TDataKey
+                return vv.toString(f(key)) as string
             }
         } else {
             this._getSubdirFromKey = (key: TDataKey) => {
                 return join(...key.substring(0, 4)) as string
+            }
+        }
+    }
+    public setGetSubdirVerify(func?: string) {
+        if (func) {
+            const ft = transpile([...this._prefix, func].join(`\n`))
+            const f = eval(ft)
+            this._getSubdirVerify = (subdir: string) => {
+                return vv.toBool(f(subdir)) as boolean
+            }
+        } else {
+            this._getSubdirVerify = (subdir: string) => {
+                return this._defaultSubdir.test(subdir) as boolean
+            }
+        }
+    }
+    public setCacheInsert(func?: string) {
+        if (func) {
+            const ft = transpile([...this._prefix, func].join(`\n`))
+            const f = eval(ft)
+            this._cacheInsert = (payLoad: any, cache: any[]) => {
+                f(payLoad, cache)
+            }
+        } else {
+            this._cacheInsert = (payLoad: any, cache: any[]) => {
+            }
+        }
+    }
+    public setCacheUpdate(func?: string) {
+        if (func) {
+            const ft = transpile([...this._prefix, func].join(`\n`))
+            const f = eval(ft)
+            this._cacheUpdate = (payLoad: any, cache: any[]) => {
+                f(payLoad, cache)
+            }
+        } else {
+            this._cacheUpdate = (payLoad: any, cache: any[]) => {
             }
         }
     }
@@ -111,48 +158,13 @@ export class DriverHandle {
     public getSubdirFromKey(key: TDataKey) {
         return this._getSubdirFromKey(key)
     }
+    public getSubdirVerify(subdir: string) {
+        return this._getSubdirVerify(subdir)
+    }
+    public cacheInsert(payLoad: any, cache: any[]) {
+        return this._cacheInsert(payLoad, cache)
+    }
+    public cacheUpdate(payLoad: any, cache: any[]) {
+        return this._cacheUpdate(payLoad, cache)
+    }
 }
-
-
-
-
-// generateKey: env.workerData.handle.generateKey
-//     ? ((payLoad?: any) => {
-//         const sf = `function ${env.workerData.handle.generateKey.substring(env.workerData.handle.generateKey.indexOf('('))}`
-//         const f = new Function(`return ${sf}`)()
-//         return f(env.uuid.getId(), payLoad) as { keyRaw: TDataKey, key: TDataKey }
-//     })
-//     : ((payLoad?: any) => {
-//         const keyRaw = env.uuid.getId()
-//         return { keyRaw: env.uuid.getId(), key: keyRaw }
-//     }),
-
-
-// generateFileName: env.workerData.handle.generateFileName
-//     ? ((key?: TDataKey, payLoad?: any) => {
-//         const sf = `function ${env.workerData.handle.generateFileName.substring(env.workerData.handle.generateFileName.indexOf('('))}`
-//         const f = new Function(`return ${sf}`)()
-//         return f(key, payLoad) as string
-//     })
-//     : ((key?: TDataKey, payLoad?: any) => {
-//         return `${key}.json` as string
-//     }),
-// generateFileSubdir: env.workerData.handle.generateFileSubdir
-//     ? ((key?: TDataKey, payLoad?: any) => {
-//         const sf = `function ${env.workerData.handle.generateFileSubdir.substring(env.workerData.handle.generateFileSubdir.indexOf('('))}`
-//         const f = new Function(`return ${sf}`)()
-//         return f(key, payLoad) as string
-//     })
-//     : ((key?: TDataKey, payLoad?: any) => {
-//         return path.join(...key.substring(0, 4)) as string
-//     }),
-// getFileFromKey: (key: string): string => {return undefined},
-// getSubdirFromKey: env.workerData.handle.getSubdirFromKey
-// ? ((key: TDataKey) => {
-//     const sf = `function ${env.workerData.handle.getSubdirFromKey.substring(env.workerData.handle.getSubdirFromKey.indexOf('('))}`
-//     const f = new Function(`return ${sf}`)()
-//     return f(key) as string
-// })
-// : ((key: TDataKey) => {
-//     return path.join(...key.substring(0, 4)) as string
-// }),

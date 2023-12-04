@@ -1,3 +1,15 @@
-//https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/naming-convention.md
+import { TDriverHandle } from "./driverHandle";
+import { DriverMaster } from "./driverMaster";
 
-console.log("hello from SRC")
+export type TDataKey = string
+
+export enum EnumQuery {
+    insert = 'insert',
+    update = 'update',
+    delete = 'delete',
+    load = 'load',
+}
+
+export function CreateDriver(handle?: TDriverHandle) {
+    return new DriverMaster(handle)
+}

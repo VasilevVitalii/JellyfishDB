@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vv from 'vv-common'
 import * as path from 'path'
 import * as fs from 'fs-extra'
@@ -5,29 +6,19 @@ import { Worker } from 'worker_threads'
 import { NumeratorIncrement } from './numerator'
 import { TDriverWorkerData } from './driverWorker'
 import { TDriverHandle } from './driverHandle'
+import { EnumQuery, TDataKey } from '.'
 
 export type TDriverMasterParam = {
     dir: string,
     countWorker?: number
 }
 
-export enum EnumQuery {
-    insert = 'insert',
-    update = 'update',
-    upsert = 'upsert',
-    delete = 'delete',
-    loadByFile = 'loadByFile',
-    loadByFilter = 'loadByFilter'
-}
-
-export type TDataKey = string
-
 export type TData = {
     wrap: {
         key: TDataKey,
         fdm: string,
         ldm: string,
-        isDeleted: boolean
+        ddm: string
     },
     payload: any
 }
@@ -44,31 +35,27 @@ export type TStamp = {
 
 export type TQueryInsert = { kind: EnumQuery.insert, payLoad: any }
 export type TQueryUpdate = { kind: EnumQuery.update, payLoad: any, key: TDataKey }
-export type TQueryUpsert = { kind: EnumQuery.upsert, payLoad: any, key: TDataKey }
 export type TQueryDelete = { kind: EnumQuery.delete, key: TDataKey }
-export type TQueryLoadByKey = { kind: EnumQuery.loadByFile, key: TDataKey[] }
+export type TQueryLoad = { kind: EnumQuery.load, key: TDataKey | TDataKey[] | 'all' }
 
 export type TQuery =
     TQueryInsert |
     TQueryUpdate |
-    TQueryUpsert |
     TQueryDelete |
-    TQueryLoadByKey
+    TQueryLoad
 
 export type TResultTemplate = {kind: EnumQuery, key: TQueryKey, error?: string}
 
 export type TResultInsert = TResultTemplate & { kind: EnumQuery.insert, stamp: TStamp }
 export type TResultUpdate = TResultTemplate & { kind: EnumQuery.update, stamp: TStamp }
-export type TResultUpsert = TResultTemplate & { kind: EnumQuery.upsert, stamp: TStamp }
 export type TResultDelete = TResultTemplate & { kind: EnumQuery.delete, stamp: TStamp }
-export type TResultLoadByFile = TResultTemplate & { kind: EnumQuery.loadByFile, stamp: TStamp[] }
+export type TResultLoad = TResultTemplate & { kind: EnumQuery.load, stamp: TStamp[] }
 
 export type TResult =
     TResultInsert |
     TResultUpdate |
-    TResultUpsert |
     TResultDelete |
-    TResultLoadByFile
+    TResultLoad
 
 export type TQueryKey = string
 
@@ -82,12 +69,10 @@ export class DriverMaster {
     private _worker = [] as TWorker[]
     private _resultQueue = [] as { result: TResult, isUsed: boolean }[]
     private _timerClearResultQueue = undefined as vv.Timer
+    private _cache = [] as any
 
     private _findWorker(queryKind: EnumQuery): TWorker {
         if (this._param.countWorker === 1) {
-            return this._worker[0]
-        }
-        if (queryKind === EnumQuery.insert || queryKind === EnumQuery.update || queryKind === EnumQuery.upsert || queryKind === EnumQuery.delete) {
             return this._worker[0]
         }
         let fndWorker = undefined as TWorker
@@ -101,14 +86,7 @@ export class DriverMaster {
         return fndWorker
     }
 
-    private _checkWork() {
-        if (!this._connected) {
-            throw new Error ('not connected')
-        }
-    }
-
     constructor(handle?: TDriverHandle) {
-        //SetGenerateKey(handle?.generateKey)
         this._handle = handle
     }
 
@@ -140,14 +118,15 @@ export class DriverMaster {
         fs.ensureDirSync(workerData.dir.process)
 
         for (let i = 0; i < this._param.countWorker; i++) {
-            const worker = new Worker(path.join(__dirname, './driverWorker.js'), { workerData })
-            worker.on('message', (result: TResult) => {
-                this._resultQueue.push({ result, isUsed: false })
-            })
-            this._worker.push({
-                worker,
+            const w = {
+                worker: new Worker(path.join(__dirname, './driverWorker.js'), { workerData }),
                 queueCount: 0
+            } as TWorker
+            w.worker.on('message', (result: TResult) => {
+                this._resultQueue.push({ result, isUsed: false })
+                w.queueCount--
             })
+            this._worker.push(w)
         }
 
         this._timerClearResultQueue = new vv.Timer(3000, () => {
@@ -158,8 +137,10 @@ export class DriverMaster {
         this._connected = true
     }
 
-    public execOne(query: TQuery): TQueryKey {
-        this._checkWork()
+    public exec(query: TQuery): TQueryKey {
+        if (!this._connected) {
+            throw new Error ('not connected')
+        }
         const w = this._findWorker(query.kind)
         const queueKey = this._numeratorQueue.getId()
         w.queueCount++
@@ -167,7 +148,7 @@ export class DriverMaster {
         return queueKey
     }
 
-    public checkResult(queryKey: TQueryKey): TResult {
+    public result(queryKey: TQueryKey): TResult {
         const fnd = this._resultQueue.find(f => f.result.key === queryKey)
         if (fnd) {
             fnd.isUsed = true
