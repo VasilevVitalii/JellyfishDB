@@ -3,3 +3,8 @@ dist
 test/*.json
 test/log
 test/data
+test/data1
+test/data2
+test/data3
+test/data4
+test/data5

@@ -1,65 +1,60 @@
 import * as vv from 'vv-common'
 import * as path from 'path'
 import * as fs from 'fs-extra'
-import { CreateDriver, EnumQuery, TDataKey } from '../src'
+import { GetDriver1 } from './driver1'
+import { GetDriver2 } from './driver2'
+import { GetDriver3 } from './driver3'
+import { GetDriver4 } from './driver4'
+import { DriverMaster, EnumQuery } from '../src'
+
+export type TPerson = {key: string, login: string, email: string, country: string }
+export type TPersonCache = {key: string, login: string, ddm: string }
+
+export const personTestList: TPerson[] = [
+    { key: null, login: 'peter', email: 'peter@gmail.com', country: null },
+    { key: null, login: 'anna', email: 'anna@gmail.com', country: 'France' },
+    { key: null, login: 'felix', email: null, country: 'Spain' },
+    { key: null, login: null, email: 'unknown@gmail.com', country: null },
+]
 
 const dataDir = path.join(__dirname, '../../test/data')
 fs.ensureDirSync(dataDir)
+fs.emptyDirSync(dataDir)
 
-const dataPersonDir = path.join(dataDir, 'person')
+const errors = [] as {driverIdx: number, err: Error}[]
 
-const driver = CreateDriver({
-    generateKey: (keyRaw?: string, payLoad?: any) => {
-        const key = `psn-${keyRaw}`
-        payLoad.key = key
-        return key
-    },
-    generateFileName: (keyRaw: TDataKey) => {
-        return `psn-${keyRaw}.json`
-    },
-    // getFileFromKey: (key: TDataKey) => {
-    //     return `${key.substring(4)}.json`
-    // },
-    getSubdirFromKey: (key: TDataKey) => {
-        return path.join(...key.substring(4, 8).split(''))
-    },
-    cacheInsert(payLoad: any, cache: any[]) {
-        cache.push({ login: payLoad?.login, key: payLoad?.key })
-    },
-    cacheUpdate(payLoad: any, cache: any[]) {
-        const fnd = cache.find(f => f.key === payLoad.key)
-        if (fnd) {
-            fnd.login = payLoad?.login
-        } else {
-            cache.push({ login: payLoad?.login, key: payLoad?.key })
-        }
-    }
+const drivers = [
+    //{driverIdx: 1, driver: GetDriver1(1, path.join(dataDir, 'driver1'), errors)},
+    {driverIdx: 2, driver: GetDriver2(2, path.join(dataDir, 'driver2'), errors)},
+    //{driverIdx: 3, driver: GetDriver3(3, path.join(dataDir, 'driver3'), errors)},
+    //{driverIdx: 4, driver: GetDriver4(4, path.join(dataDir, 'driver4'), errors)},
+] as {driverIdx: number, driver: DriverMaster<TPerson,TPersonCache>}[]
+
+const tasks = [] as {driverIdx: number, key: string}[]
+
+tasks.splice(0)
+step1(() => {
+    console.log('ok')
 })
 
-driver.connect({ dir: dataPersonDir })
+function step1(callback: () => void) {
+    personTestList.forEach(p => {
+        drivers.forEach(d => {
+            tasks.push({driverIdx: d.driverIdx, key: d.driver.exec({kind: EnumQuery.insert, payLoad: p})})
+        })
+    })
+    callback()
+}
 
-const keys = [] as string[]
-
-//keys.push(driver.execOne({ kind: EnumQuery.insert, payLoad: { login: 'peter', email: 'peter@gmail.com' } }))
-//keys.push(driver.execOne({ kind: EnumQuery.insert, payLoad: { login: 'anna', email: 'anna@gmail.com' } }))
-//keys.push(driver.execOne({ kind: EnumQuery.insert, payLoad: { login: 'anna4', email: 'anna@gmail.com' } }))
-//keys.push(driver.execOne({ kind: EnumQuery.update, key: 'psn-4067fe1a5c6f646f4e65a69de191fe81e317', payLoad: {country: 'Spb'} }))
-//keys.push(driver.execOne({ kind: EnumQuery.delete, key: 'psn-4067fe1a5c6f646f4e65a69de191fe81e317' }))
-//keys.push(driver.execOne({ kind: EnumQuery.load, key: ['psn-4067fe1a5c6f646f4e65a69de191fe81e317', 'psn-406701fe8a2d73da4797abe32824fdff7c6f'] }))
-
-keys.push(driver.exec({ kind: EnumQuery.load, key: 'all' }))
-
-const t = new vv.Timer(50, () => {
-    if (keys.length > 0) {
-        const key = keys[0]
-        const result = driver.result(key)
-        if (result) {
-            console.log(result)
-            keys.splice(0, 1)
-        }
-        t.nextTick(50)
-    } else {
-        console.log('empty!!!')
-    }
+const t = new vv.Timer(5000, () => {
+    console.log(errors)
 })
 
+// drivers.forEach(drivers => {
+//     drivers.result()
+// })
+
+// deep1, cache, noredefine
+// deep2, nocache, noredefine
+// deep3, cache, redefine
+// deep4, nocache, redefine

@@ -4,36 +4,43 @@ import { NumeratorUuid } from "./numerator"
 import { transpile } from "typescript"
 import { join } from 'path'
 import { TDataKey } from '.'
+import { TStamp } from './driverMaster'
 
-type TDriverHandleGenerateKey = (keyRaw?: TDataKey, payLoad?: any) => string
-type TDriverHandleGenerateFileName = (keyRaw?: TDataKey, payLoad?: any) => string
-type TDriverHandleGenerateFileSubdir = (keyRaw?: TDataKey, payLoad?: any) => string
+type TDriverHandleGenerateKey<TAbstractPayLoad> = (keyRaw?: TDataKey, payLoad?: TAbstractPayLoad) => string
+type TDriverHandleGenerateFileName<TAbstractPayLoad> = (keyRaw?: TDataKey, payLoad?: TAbstractPayLoad) => string
+type TDriverHandleGenerateFileSubdir<TAbstractPayLoad> = (keyRaw?: TDataKey, payLoad?: TAbstractPayLoad) => string
 type TDriverHandleGetFileFromKey = (key: TDataKey) => string
 type TDriverHandleGetSubdirFromKey = (key: TDataKey) => string
 type TDriverHandleGetSubdirVerify   = (subdir: string) => boolean
-type TDriverHandleCacheInsert = (payLoad: any, cache: any[]) => void
-type TDriverHandleCacheUpdate = (payLoad: any, cache: any[]) => void
+type TDriverHandleCacheInsert<TAbstractPayLoad,TAbstractPayLoadCache> = (stamp: TStamp<TAbstractPayLoad>, cache: TAbstractPayLoadCache[]) => void
+type TDriverHandleCacheUpdate<TAbstractPayLoad,TAbstractPayLoadCache> = (stamp: TStamp<TAbstractPayLoad>, cache: TAbstractPayLoadCache[]) => void
+type TDriverHandleCacheDelete<TAbstractPayLoad,TAbstractPayLoadCache> = (stamp: TStamp<TAbstractPayLoad>, cache: TAbstractPayLoadCache[]) => void
+type TDriverHandleCacheShrink = (cache: any[]) => void
 
-export type TDriverHandle = {
-    generateKey?: TDriverHandleGenerateKey,
-    generateFileName?: TDriverHandleGenerateFileName,
-    generateFileSubdir?: TDriverHandleGenerateFileSubdir,
+export type TDriverHandle<TAbstractPayLoad, TAbstractPayLoadCache> = {
+    generateKey?: TDriverHandleGenerateKey<TAbstractPayLoad>,
+    generateFileName?: TDriverHandleGenerateFileName<TAbstractPayLoad>,
+    generateFileSubdir?: TDriverHandleGenerateFileSubdir<TAbstractPayLoad>,
     getFileFromKey?: TDriverHandleGetFileFromKey,
     getSubdirFromKey?: TDriverHandleGetSubdirFromKey,
     getSubdirVerify?: TDriverHandleGetSubdirVerify,
-    cacheInsert?: TDriverHandleCacheInsert,
-    cacheUpdate?: TDriverHandleCacheUpdate,
+    cacheInsert?: TDriverHandleCacheInsert<TAbstractPayLoad,TAbstractPayLoadCache>,
+    cacheUpdate?: TDriverHandleCacheUpdate<TAbstractPayLoad,TAbstractPayLoadCache>,
+    cacheDelete?: TDriverHandleCacheDelete<TAbstractPayLoad,TAbstractPayLoadCache>,
+    cacheShrink?: TDriverHandleCacheShrink
 }
 
-export class DriverHandle {
-    private _generateKey = undefined as TDriverHandleGenerateKey
-    private _generateFileName = undefined as TDriverHandleGenerateFileName
-    private _generateFileSubdir = undefined as TDriverHandleGenerateFileSubdir
-    private _getFileFromKey = undefined as TDriverHandleGetFileFromKey
-    private _getSubdirFromKey = undefined as TDriverHandleGetSubdirFromKey
-    private _getSubdirVerify = undefined as TDriverHandleGetSubdirVerify
-    private _cacheInsert = undefined as TDriverHandleCacheInsert
-    private _cacheUpdate = undefined as TDriverHandleCacheUpdate
+export class DriverHandle<TAbstractPayLoad> {
+    private _funcGenerateKey = undefined
+    private _funcGenerateFileName = undefined
+    private _funcGenerateFileSubdir = undefined
+    private _funcGetFileFromKey = undefined
+    private _funcGetSubdirFromKey = undefined
+    private _funcGetSubdirVerify = undefined
+    private _funcCacheInsert = undefined
+    private _funcCacheUpdate = undefined
+    private _funcCacheDelete = undefined
+    private _funcCacheShrink = undefined
 
     private _uuid = new NumeratorUuid()
     private _prefix = [`import * as path from 'path'`]
@@ -43,11 +50,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._generateKey = (keyRaw: TDataKey, payLoad?: any) => {
+            this._funcGenerateKey = (keyRaw: TDataKey, payLoad?: TAbstractPayLoad) => {
                 return vv.toString(f(keyRaw, payLoad)) as TDataKey
             }
         } else {
-            this._generateKey = (keyRaw: TDataKey) => {
+            this._funcGenerateKey = (keyRaw: TDataKey) => {
                 return keyRaw
             }
         }
@@ -56,11 +63,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._generateFileName = (keyRaw: TDataKey, payLoad?: any) => {
+            this._funcGenerateFileName = (keyRaw: TDataKey, payLoad?: TAbstractPayLoad) => {
                 return vv.toString(f(keyRaw, payLoad)) as string
             }
         } else {
-            this._generateFileName = (keyRaw: TDataKey) => {
+            this._funcGenerateFileName = (keyRaw: TDataKey) => {
                 return `${keyRaw}.json` as string
             }
         }
@@ -69,11 +76,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._generateFileSubdir = (keyRaw: TDataKey, payLoad?: any) => {
+            this._funcGenerateFileSubdir = (keyRaw: TDataKey, payLoad?: TAbstractPayLoad) => {
                 return vv.toString(f(keyRaw, payLoad)) as string
             }
         } else {
-            this._generateFileSubdir = (keyRaw: TDataKey) => {
+            this._funcGenerateFileSubdir = (keyRaw: TDataKey) => {
                 return join(...keyRaw.substring(0, 4)) as string
             }
         }
@@ -82,11 +89,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._getFileFromKey = (key: TDataKey) => {
+            this._funcGetFileFromKey = (key: TDataKey) => {
                 return vv.toString(f(key)) as string
             }
         } else {
-            this._getFileFromKey = (key: TDataKey) => {
+            this._funcGetFileFromKey = (key: TDataKey) => {
                 return `${key}.json` as string
             }
         }
@@ -95,11 +102,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._getSubdirFromKey = (key: TDataKey) => {
+            this._funcGetSubdirFromKey = (key: TDataKey) => {
                 return vv.toString(f(key)) as string
             }
         } else {
-            this._getSubdirFromKey = (key: TDataKey) => {
+            this._funcGetSubdirFromKey = (key: TDataKey) => {
                 return join(...key.substring(0, 4)) as string
             }
         }
@@ -108,11 +115,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._getSubdirVerify = (subdir: string) => {
+            this._funcGetSubdirVerify = (subdir: string) => {
                 return vv.toBool(f(subdir)) as boolean
             }
         } else {
-            this._getSubdirVerify = (subdir: string) => {
+            this._funcGetSubdirVerify = (subdir: string) => {
                 return this._defaultSubdir.test(subdir) as boolean
             }
         }
@@ -121,11 +128,11 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._cacheInsert = (payLoad: any, cache: any[]) => {
-                f(payLoad, cache)
+            this._funcCacheInsert = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
+                f(stamp, cache)
             }
         } else {
-            this._cacheInsert = (payLoad: any, cache: any[]) => {
+            this._funcCacheInsert = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
             }
         }
     }
@@ -133,38 +140,69 @@ export class DriverHandle {
         if (func) {
             const ft = transpile([...this._prefix, func].join(`\n`))
             const f = eval(ft)
-            this._cacheUpdate = (payLoad: any, cache: any[]) => {
-                f(payLoad, cache)
+            this._funcCacheUpdate = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
+                f(stamp, cache)
             }
         } else {
-            this._cacheUpdate = (payLoad: any, cache: any[]) => {
+            this._funcCacheUpdate = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
+            }
+        }
+    }
+    public setCacheDelete(func?: string) {
+        if (func) {
+            const ft = transpile([...this._prefix, func].join(`\n`))
+            const f = eval(ft)
+            this._funcCacheDelete = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
+                f(stamp, cache)
+            }
+        } else {
+            this._funcCacheDelete = (stamp: TStamp<TAbstractPayLoad>, cache: any[]) => {
+            }
+        }
+    }
+    public setCacheShrink(func?: string) {
+        if (func) {
+            const ft = transpile([...this._prefix, func].join(`\n`))
+            const f = eval(ft)
+            this._funcCacheShrink = (cache: any[]) => {
+                f(cache)
+            }
+        } else {
+            this._funcCacheShrink = (cache: any[]) => {
             }
         }
     }
 
-    public generateKey(payLoad: any): { keyRaw: TDataKey, key: TDataKey } {
+
+    public generateKey(payLoad: TAbstractPayLoad): { keyRaw: TDataKey, key: TDataKey } {
         const keyRaw = this._uuid.getId()
-        return { keyRaw, key: this._generateKey(keyRaw, payLoad) }
+        return { keyRaw, key: this._funcGenerateKey(keyRaw, payLoad) }
     }
-    public generateFileName(keyRaw: TDataKey, payLoad: any) {
-        return this._generateFileName(keyRaw, payLoad)
+    public generateFileName(keyRaw: TDataKey, payLoad: TAbstractPayLoad) {
+        return this._funcGenerateFileName(keyRaw, payLoad)
     }
-    public generateFileSubdir(keyRaw: TDataKey, payLoad: any) {
-        return this._generateFileSubdir(keyRaw, payLoad)
+    public generateFileSubdir(keyRaw: TDataKey, payLoad: TAbstractPayLoad) {
+        return this._funcGenerateFileSubdir(keyRaw, payLoad)
     }
     public getFileFromKey(key: TDataKey) {
-        return this._getFileFromKey(key)
+        return this._funcGetFileFromKey(key)
     }
     public getSubdirFromKey(key: TDataKey) {
-        return this._getSubdirFromKey(key)
+        return this._funcGetSubdirFromKey(key)
     }
     public getSubdirVerify(subdir: string) {
-        return this._getSubdirVerify(subdir)
+        return this._funcGetSubdirVerify(subdir)
     }
-    public cacheInsert(payLoad: any, cache: any[]) {
-        return this._cacheInsert(payLoad, cache)
+    public cacheInsert(stamp: TStamp<TAbstractPayLoad>, cache: any[]) {
+        return this._funcCacheInsert(stamp, cache)
     }
-    public cacheUpdate(payLoad: any, cache: any[]) {
-        return this._cacheUpdate(payLoad, cache)
+    public cacheUpdate(stamp: TStamp<TAbstractPayLoad>, cache: any[]) {
+        return this._funcCacheUpdate(stamp, cache)
+    }
+    public cacheDelete(stamp: TStamp<TAbstractPayLoad>, cache: any[]) {
+        return this._funcCacheDelete(stamp, cache)
+    }
+    public cacheShrink(cache: any[]) {
+        return this._funcCacheShrink(cache)
     }
 }
