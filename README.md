@@ -17,8 +17,9 @@ Embedded NoSQL "database", based on file storage.
 npm i jellyfishdb
 ```
 ## Example
-```javascript
-
+```typescript
+export type TPerson = {key: string, login: string, email: string, country: string }
+export type TPersonCache = {key: string, login: string, ddm: string }
 
 ```
 
