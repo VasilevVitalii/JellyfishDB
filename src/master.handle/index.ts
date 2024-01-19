@@ -1,9 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import * as vv from 'vv-common'
-import { NumeratorUuid } from "../numerator"
-import { transpile } from "typescript"
-import { join } from 'path'
-import { TDataKey } from '..'
 import { TResultQueue, TStamp } from '../driverMaster'
 
 type TDriverHandleCacheInsert<TAbstractPayLoad,TAbstractPayLoadCache> = (stamp: TStamp<TAbstractPayLoad>, cache: TAbstractPayLoadCache[]) => void
@@ -13,11 +8,19 @@ type TDriverHandleCacheShrink = (cache: any[]) => void
 type TDriverHandleOnResult<TAbstractPayLoad> = (result: TResultQueue<TAbstractPayLoad>) => void
 
 export type TMasterDriverHandle<TAbstractPayLoad, TAbstractPayLoadCache> = {
-    cacheInsert?: TDriverHandleCacheInsert<TAbstractPayLoad,TAbstractPayLoadCache>,
-    cacheUpdate?: TDriverHandleCacheUpdate<TAbstractPayLoad,TAbstractPayLoadCache>,
-    cacheDelete?: TDriverHandleCacheDelete<TAbstractPayLoad,TAbstractPayLoadCache>,
-    cacheShrink?: TDriverHandleCacheShrink
+    /** read (with the possibility of change) all message with result from workers to general result queue */
     onResult?: TDriverHandleOnResult<TAbstractPayLoad>
+    /** functions for cache system */
+    cache?: {
+        /** add data to cache */
+        onInsert: TDriverHandleCacheInsert<TAbstractPayLoad,TAbstractPayLoadCache>,
+        /** update data in cache */
+        onUpdate: TDriverHandleCacheUpdate<TAbstractPayLoad,TAbstractPayLoadCache>,
+        /** mark data as "deleted" in cache */
+        onDelete: TDriverHandleCacheDelete<TAbstractPayLoad,TAbstractPayLoadCache>,
+        /** remove "deleted" data from cache */
+        onShrink: TDriverHandleCacheShrink
+    }
 }
 
 export class MasterDriverHandle<TAbstractPayLoad> {

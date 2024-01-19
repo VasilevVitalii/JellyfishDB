@@ -15,10 +15,17 @@ type TDriverHandleGetFileNameFromKey = (key: TDataKey, fileNameDefault: string) 
 type TDriverHandleGetFileSubdirFromKey = (key: TDataKey, subdirNameDefault: string) => string
 
 export type TWorkerDriverHandle<TAbstractPayLoad> = {
+    /** denine primary key in payload data: read pk */
     getKeyFromPayload: TDriverHandleGetKeyFromPayload<TAbstractPayLoad>,
+    /** denine primary key in payload data: set pk */
     setKeyToPayload: TDriverHandleSetKeyToPayload<TAbstractPayLoad>,
-    getFileNameFromKey?: TDriverHandleGetFileNameFromKey,
-    getFileSubdirFromKey?: TDriverHandleGetFileSubdirFromKey
+    /** redefine file storage */
+    storage?: {
+        /** regefine file name (default = `${key}.json`) */
+        getFileNameFromKey?: TDriverHandleGetFileNameFromKey,
+        /** regefine subdir (default = off) */
+        getFileSubdirFromKey?: TDriverHandleGetFileSubdirFromKey
+    }
 }
 
 export class WorkerDriverHandle<TAbstractPayLoad> {

@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vv from 'vv-common'
 import * as path from 'path'
 import * as fs from 'fs-extra'
 import { Worker } from 'worker_threads'
-import { NumeratorIncrement, NumeratorUuid } from './numerator'
+import { NumeratorIncrement } from './numerator'
 import { TDriverWorkerData } from './driverWorker'
 import { EnumQuery, EnumQueryTargetLoad, TDataKey, TWorkerDriverHandle } from '.'
 import { MasterDriverHandle, TMasterDriverHandle } from './master.handle'
-import { error } from 'console'
 
 export type TDriverMasterParam = {
+    /** root dir for data storage */
     dir: string,
+    /** count parallel worker, default = 4, min = 1, max = 1024 */
     countWorker?: number,
 }
 
@@ -81,7 +81,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
     private _cache = [] as TAbstractPayLoadCache[]
     private _handleCache = undefined as MasterDriverHandle<TAbstractPayLoad>
 
-    private _findWorker(queryKind: EnumQuery): TWorker {
+    private _findWorker(): TWorker {
         if (this._param.countWorker === 1) {
             return this._worker[0]
         }
@@ -138,8 +138,8 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
             handle: {
                 getKeyFromPayload: this._handle?.getKeyFromPayload?.toString(),
                 setKeyToPayload: this._handle?.setKeyToPayload?.toString(),
-                getFileNameFromKey: this._handle?.getFileNameFromKey?.toString(),
-                getFileSubdirFromKey: this._handle?.getFileSubdirFromKey?.toString(),
+                getFileNameFromKey: this._handle?.storage?.getFileNameFromKey?.toString(),
+                getFileSubdirFromKey: this._handle?.storage?.getFileSubdirFromKey?.toString(),
             }
         }
 
@@ -150,10 +150,10 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
             fs.ensureDirSync(workerData.dir.wrap)
 
             this._handleCache = new MasterDriverHandle()
-            this._handleCache.setCacheDelete(this._handle?.cacheDelete)
-            this._handleCache.setCacheInsert(this._handle?.cacheInsert)
-            this._handleCache.setCacheUpdate(this._handle?.cacheUpdate)
-            this._handleCache.setCacheShrink(this._handle?.cacheShrink)
+            this._handleCache.setCacheDelete(this._handle?.cache?.onDelete)
+            this._handleCache.setCacheInsert(this._handle?.cache?.onInsert)
+            this._handleCache.setCacheUpdate(this._handle?.cache?.onUpdate)
+            this._handleCache.setCacheShrink(this._handle?.cache?.onShrink)
             this._handleCache.setOnResult(this._handle?.onResult)
         } catch (err) {
             if (onError) {
@@ -235,7 +235,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         if (!this._connected) {
             throw new Error ('not connected')
         }
-        const w = this._findWorker(query.kind)
+        const w = this._findWorker()
         const queueKey = this._numeratorQueue.getId()
         w.queueCount++
         w.worker.postMessage({ queueKey, query })

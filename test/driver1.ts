@@ -17,30 +17,32 @@ export function GetDriver1 (rootTestDataDir: string): TDriverList {
             payLoad.key = keyDefault
             return keyDefault
         },
-        cacheDelete(stamp, cache) {
-            const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
-            if (fnd) {
-                fnd.ddm = stamp.wrapStamp.wrap.ddm
-            }
-        },
-        cacheShrink: (cache) => {
-            let fndIdx = cache.findIndex(f => f.ddm)
-            while (fndIdx >= 0) {
-                cache.splice(fndIdx, 1)
-                fndIdx = cache.findIndex(f => f.ddm)
-            }
-        },
-        cacheInsert: (stamp, cache) => {
-            cache.push({ login: stamp.payLoadStamp.data.login, key: stamp.payLoadStamp.data.key, ddm: stamp.wrapStamp.wrap.ddm })
-        },
-        cacheUpdate: (stamp, cache) => {
-            const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
-            if (fnd) {
-                fnd.login = stamp.payLoadStamp.data.login
-                fnd.ddm = stamp.wrapStamp.wrap.ddm
-            } else {
+        cache: {
+            onDelete(stamp, cache) {
+                const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
+                if (fnd) {
+                    fnd.ddm = stamp.wrapStamp.wrap.ddm
+                }
+            },
+            onShrink: (cache) => {
+                let fndIdx = cache.findIndex(f => f.ddm)
+                while (fndIdx >= 0) {
+                    cache.splice(fndIdx, 1)
+                    fndIdx = cache.findIndex(f => f.ddm)
+                }
+            },
+            onInsert: (stamp, cache) => {
                 cache.push({ login: stamp.payLoadStamp.data.login, key: stamp.payLoadStamp.data.key, ddm: stamp.wrapStamp.wrap.ddm })
-            }
+            },
+            onUpdate: (stamp, cache) => {
+                const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
+                if (fnd) {
+                    fnd.login = stamp.payLoadStamp.data.login
+                    fnd.ddm = stamp.wrapStamp.wrap.ddm
+                } else {
+                    cache.push({ login: stamp.payLoadStamp.data.login, key: stamp.payLoadStamp.data.key, ddm: stamp.wrapStamp.wrap.ddm })
+                }
+            },
         },
         getFileSubdirFromKey(key) {
             const pathPart = key.substring(4, 7)
