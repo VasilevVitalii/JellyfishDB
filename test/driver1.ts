@@ -44,10 +44,12 @@ export function GetDriver1 (rootTestDataDir: string): TDriverList {
                 }
             },
         },
-        getFileSubdirFromKey(key) {
-            const pathPart = key.substring(4, 7)
-            return path.join(...pathPart)
-        },
+        storage: {
+            getFileSubdirFromKey(key) {
+                const pathPart = key.substring(4, 7)
+                return path.join(...pathPart)
+            },
+        }
     })
     driver.connect({dir}, (err) => {errors.push({driverKey, err})})
     return {key: driverKey, driver, deep: dirDeep, hasCache: true}
