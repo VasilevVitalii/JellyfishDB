@@ -1,14 +1,26 @@
-import { CreateDriver, DriverMaster } from '../src'
-import {TPerson, TPersonCache} from './index'
+import path from 'path'
+import { CreateDriver } from '../src'
+import { TPerson, TPersonCache } from './state'
+import { errors } from './errors'
+import { TDriverList } from '.'
 
-export function GetDriver1 (driverIdx: number, dir: string, errors: {driverIdx: number, err: Error}[]): DriverMaster<TPerson,TPersonCache> {
-    const dirDeep = 1
-    console.log(`driver${driverIdx}: deep${dirDeep}, cache, noredefine`)
+export function GetDriver1 (rootTestDataDir: string): TDriverList {
+    const driverKey = 'driver1'
+    const dir = path.join(rootTestDataDir, driverKey)
+    const dirDeep = 3
+    console.log(`${driverKey}: deep${dirDeep}, cache`)
     const driver = CreateDriver<TPerson,TPersonCache>({
+        getKeyFromPayload(payLoad) {
+            return payLoad.key
+        },
+        setKeyToPayload(payLoad, keyDefault) {
+            payLoad.key = keyDefault
+            return keyDefault
+        },
         cacheDelete(stamp, cache) {
-            const fnd = cache.find(f => f.key === stamp.data.payload.key)
+            const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
             if (fnd) {
-                fnd.ddm = stamp.data.wrap.ddm
+                fnd.ddm = stamp.wrapStamp.wrap.ddm
             }
         },
         cacheShrink: (cache) => {
@@ -19,18 +31,22 @@ export function GetDriver1 (driverIdx: number, dir: string, errors: {driverIdx: 
             }
         },
         cacheInsert: (stamp, cache) => {
-            cache.push({ login: stamp.data.payload.login, key: stamp.data.payload.key, ddm: stamp.data.wrap.ddm })
+            cache.push({ login: stamp.payLoadStamp.data.login, key: stamp.payLoadStamp.data.key, ddm: stamp.wrapStamp.wrap.ddm })
         },
         cacheUpdate: (stamp, cache) => {
-            const fnd = cache.find(f => f.key === stamp.data.payload.key)
+            const fnd = cache.find(f => f.key === stamp.payLoadStamp.data.key)
             if (fnd) {
-                fnd.login = stamp.data.payload.login
-                fnd.ddm = stamp.data.wrap.ddm
+                fnd.login = stamp.payLoadStamp.data.login
+                fnd.ddm = stamp.wrapStamp.wrap.ddm
             } else {
-                cache.push({ login: stamp.data.payload.login, key: stamp.data.payload.key, ddm: stamp.data.wrap.ddm })
+                cache.push({ login: stamp.payLoadStamp.data.login, key: stamp.payLoadStamp.data.key, ddm: stamp.wrapStamp.wrap.ddm })
             }
         },
+        getFileSubdirFromKey(key) {
+            const pathPart = key.substring(4, 7)
+            return path.join(...pathPart)
+        },
     })
-    driver.connect({dir, dirDeep}, (err) => {errors.push({driverIdx, err})})
-    return driver
+    driver.connect({dir}, (err) => {errors.push({driverKey, err})})
+    return {key: driverKey, driver, deep: dirDeep, hasCache: true}
 }

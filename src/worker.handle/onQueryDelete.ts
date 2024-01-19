@@ -1,77 +1,31 @@
 import * as vv from 'vv-common';
-import * as path from 'path';
 import * as fs from 'fs-extra';
-import { TData, TResultDelete, TQueryDelete } from '../driverMaster';
-import { handle, env } from '../driverWorker';
+import { TResultDelete, TQueryDelete } from '../driverMaster';
+import { GetStamp } from '.';
 
-export function OnQueryDelete(result: TResultDelete<any>, query: TQueryDelete, calback: () => void) {
-    const p = {
-        dm: vv.dateFormat(new Date(), '126'),
-        fileName: undefined as string,
-        fileSubdir: undefined as string,
-        fileDir: undefined as string,
-        fileFullName: undefined as string
-    };
+export function OnQueryDelete<TAbstractPayLoad>(result: TResultDelete<TAbstractPayLoad>, query: TQueryDelete, calback: () => void) {
+    const dm = vv.dateFormat(new Date(), '126')
 
-    try {
-        p.fileName = handle.getFileFromKey(query.key);
-    } catch (error) {
-        result.error = `on getFileFromKey(${query.key}) - ${error}`;
-        calback();
-        return;
-    }
-
-    try {
-        p.fileSubdir = handle.getSubdirFromKey(query.key);
-    } catch (error) {
-        result.error = `on getSubdirFromKey(${query.key}) - ${error}`;
-        calback();
-        return;
-    }
-
-    try {
-        p.fileDir = path.join(env.workerData.dir.data, p.fileSubdir);
-        p.fileFullName = path.join(p.fileDir, p.fileName);
-    } catch (error) {
-        result.error = `on build dir - ${error}`;
-        calback();
-        return;
-    }
-
-    fs.stat(p.fileFullName, error => {
-        if (error) {
-            result.error = `not exists file "${p.fileFullName}" - ${error}`;
-            calback();
-            return;
-        }
-        fs.readJSON(p.fileFullName, { encoding: 'utf8' }, (error, data: TData<any>) => {
-            if (error) {
-                result.error = `on read file "${p.fileFullName}" - ${error}`;
-                calback();
-                return;
+    GetStamp<TAbstractPayLoad>(query.key, {wrap: true, data: true})
+        .then(res => {
+            result.error = res.error
+            result.stamp = res.stamp
+            if (res.error) {
+                calback()
+                return
             }
-            try {
-                data.wrap.ddm = p.dm;
 
-                result.stamp = {
-                    data: data,
-                    position: {
-                        file: p.fileName,
-                        subdir: p.fileSubdir
-                    }
-                };
+            result.stamp.wrapStamp.wrap = result.stamp.wrapStamp.wrap ? {...result.stamp.wrapStamp.wrap, ddm: dm } : {fdm: null, ldm: null, ddm: dm}
 
-                fs.writeJSON(p.fileFullName, data, { encoding: 'utf8', spaces: `\t` }, error => {
-                    if (error) {
-                        result.error = `on write json "${p.fileFullName}" - ${error}`;
-                    }
-                    calback();
-                });
-            } catch (error) {
-                result.error = `on delete - ${error}`;
-                calback();
-                return;
-            }
-        });
-    });
+            fs.writeJSON(result.stamp.wrapStamp.fileFullName, result.stamp.wrapStamp.wrap, { encoding: 'utf8', spaces: `\t` }, error => {
+                if (error) {
+                    result.error = `on write json "${result.stamp.wrapStamp.fileFullName}" - ${error}`;
+                }
+                calback()
+            })
+        })
+        .catch(err => {
+            result.error = `on FilePrepare(${query.key}) - ${err}`
+            calback()
+        })
 }

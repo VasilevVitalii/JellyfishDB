@@ -4,7 +4,7 @@ import * as vv from 'vv-common'
 import * as path from 'path'
 import { TQuery, TQueryKey, TResult, TResultInsert, TResultTemplate, TResultDelete, TResultUpdate, TResultLoadByKey, TResultLoadAll, TResultShrink } from './driverMaster'
 import { NumeratorUuid } from './numerator'
-import { DriverHandle } from './driverHandle'
+import { WorkerDriverHandle } from './worker.handle'
 import { EnumQuery } from '.'
 import { OnQueryInsert } from './worker.handle/onQueryInsert'
 import { OnQueryUpdate } from './worker.handle/onQueryUpdate'
@@ -16,16 +16,15 @@ import { OnQueryLoadAll } from './worker.handle/onQueryLoadAll'
 export type TDriverWorkerData = {
     dir: {
         data: string,
+        wrap: string,
         index: string,
         process: string,
     },
     handle: {
-        generateKey: string
-        generateFileName: string
-        generateFileSubdir: string
-        getFileFromKey: string
-        getSubdirFromKey: string,
-        getSubdirVerify: string,
+        getKeyFromPayload: string
+        setKeyToPayload: string
+        getFileNameFromKey: string
+        getFileSubdirFromKey: string
     }
 }
 
@@ -35,13 +34,11 @@ export const env = {
     queryQueue: [] as { queueKey: TQueryKey, query: TQuery<any> }[]
 }
 
-export const handle = new DriverHandle()
-handle.setGenerateKey(env.workerData?.handle?.generateKey?.toString())
-handle.setGenerateFileName(env.workerData?.handle?.generateFileName?.toString())
-handle.setGenerateFileSubdir(env.workerData?.handle?.generateFileSubdir?.toString())
-handle.setGetFileFromKey(env.workerData?.handle?.getFileFromKey?.toString())
-handle.setGetSubdirFromKey(env.workerData?.handle?.getSubdirFromKey?.toString())
-handle.setGetSubdirVerify(env.workerData?.handle?.getSubdirVerify?.toString())
+export const handle = new WorkerDriverHandle()
+handle.setGetKeyFromPayload(env.workerData?.handle?.getKeyFromPayload?.toString())
+handle.setSetKeyToPayload(env.workerData?.handle?.setKeyToPayload?.toString())
+handle.setGetFileNameFromKey(env.workerData?.handle?.getFileNameFromKey?.toString())
+handle.setGetFileSubdirFromKey(env.workerData?.handle?.getFileSubdirFromKey?.toString())
 
 function queryQueueProcess(calback: () => void) {
     const queryQueue = env.queryQueue.shift()
@@ -74,7 +71,7 @@ function queryQueueProcess(calback: () => void) {
             queryQueueProcess(calback)
         })
     } else if (queryQueue.query.kind === EnumQuery.shrink) {
-        OnQueryShrink(result as TResultShrink, queryQueue.query, (result) => {
+        OnQueryShrink(result as TResultShrink, () => {
             parentPort.postMessage(result)
             queryQueueProcess(calback)
         })

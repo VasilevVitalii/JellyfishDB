@@ -1,45 +1,45 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as vv from 'vv-common'
 import * as path from 'path'
 import * as fs from 'fs-extra'
 import { Worker } from 'worker_threads'
-import { NumeratorIncrement } from './numerator'
+import { NumeratorIncrement, NumeratorUuid } from './numerator'
 import { TDriverWorkerData } from './driverWorker'
-import { DriverHandle, TDriverHandle } from './driverHandle'
-import { EnumQuery, TDataKey } from '.'
+import { EnumQuery, EnumQueryTargetLoad, TDataKey, TWorkerDriverHandle } from '.'
+import { MasterDriverHandle, TMasterDriverHandle } from './master.handle'
+import { error } from 'console'
 
 export type TDriverMasterParam = {
     dir: string,
-    dirDeep?: 1 | 2 | 3 | 4,
     countWorker?: number,
 }
 
-export type TData<TAbstractPayLoad> = {
-    wrap: {
-        key: TDataKey,
-        fdm: string,
-        ldm: string,
-        ddm: string
-    },
-    payload: TAbstractPayLoad
-}
-
-export type TPosition = {
-    file: string,
-    subdir: string
+export type TDataWrap = {
+    fdm: string,
+    ldm: string,
+    ddm: string
 }
 
 export type TStamp<TAbstractPayLoad> = {
-    data: TData<TAbstractPayLoad>,
-    position: TPosition
+    payLoadStamp: {
+        fileFullName: string,
+        fileSubdir: string,
+        data: TAbstractPayLoad,
+    },
+    wrapStamp: {
+        fileFullName: string,
+        fileSubdir: string,
+        wrap: TDataWrap
+    }
 }
 
 export type TQueryInsert<TAbstractPayLoad> = { kind: EnumQuery.insert, payLoad: TAbstractPayLoad }
-export type TQueryUpdate<TAbstractPayLoad> = { kind: EnumQuery.update, payLoad: TAbstractPayLoad, key: TDataKey }
+export type TQueryUpdate<TAbstractPayLoad> = { kind: EnumQuery.update, payLoad: TAbstractPayLoad }
 export type TQueryDelete = { kind: EnumQuery.delete, key: TDataKey }
 export type TQueryShrink = { kind: EnumQuery.shrink }
 export type TQueryLoadByKey = { kind: EnumQuery.loadByKey, key: TDataKey | TDataKey[]}
-export type TQueryLoadAll = { kind: EnumQuery.loadAll, target: 'my' | 'cache' }
+export type TQueryLoadAll = { kind: EnumQuery.loadAll, target: EnumQueryTargetLoad }
 
 export type TQuery<TAbstractPayLoad> =
     TQueryInsert<TAbstractPayLoad> |
@@ -54,9 +54,9 @@ export type TResultTemplate = {kind: EnumQuery, key: TQueryKey, error?: string}
 export type TResultInsert<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.insert, stamp: TStamp<TAbstractPayLoad> }
 export type TResultUpdate<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.update, stamp: TStamp<TAbstractPayLoad> }
 export type TResultDelete<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.delete, stamp: TStamp<TAbstractPayLoad> }
-export type TResultShrink = TResultTemplate & { kind: EnumQuery.shrink }
+export type TResultLoadAll<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.loadAll, target: EnumQueryTargetLoad, stamp: TStamp<TAbstractPayLoad>[] }
 export type TResultLoadByKey<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.loadByKey, stamp: TStamp<TAbstractPayLoad>[] }
-export type TResultLoadAll<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.loadAll, target: 'my' | 'cache', stamp: TStamp<TAbstractPayLoad>[] }
+export type TResultShrink = TResultTemplate & { kind: EnumQuery.shrink }
 
 export type TResult<TAbstractPayLoad> =
     TResultInsert<TAbstractPayLoad> |
@@ -65,21 +65,21 @@ export type TResult<TAbstractPayLoad> =
     TResultShrink |
     TResultLoadByKey<TAbstractPayLoad> |
     TResultLoadAll<TAbstractPayLoad>
-
+export type TResultQueue<TAbstractPayLoad> = { result: TResult<TAbstractPayLoad>, isUsed: boolean }
 export type TQueryKey = string
 
 type TWorker = { worker: Worker, queueCount: number }
 
 export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
     private _connected = false
-    private _handle = undefined as TDriverHandle<TAbstractPayLoad,TAbstractPayLoadCache>
+    private _handle = undefined as TWorkerDriverHandle<TAbstractPayLoad> & TMasterDriverHandle<TAbstractPayLoad,TAbstractPayLoadCache>
     private _param = undefined as TDriverMasterParam
     private _numeratorQueue = new NumeratorIncrement()
     private _worker = [] as TWorker[]
-    private _resultQueue = [] as { result: TResult<TAbstractPayLoad>, isUsed: boolean }[]
+    private _resultQueue = [] as TResultQueue<TAbstractPayLoad>[]
     private _timerClearResultQueue = undefined as vv.Timer
     private _cache = [] as TAbstractPayLoadCache[]
-    private _handleCache = undefined as DriverHandle<TAbstractPayLoad>
+    private _handleCache = undefined as MasterDriverHandle<TAbstractPayLoad>
 
     private _findWorker(queryKind: EnumQuery): TWorker {
         if (this._param.countWorker === 1) {
@@ -96,22 +96,36 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         return fndWorker
     }
 
-    constructor(handle?: TDriverHandle<TAbstractPayLoad,TAbstractPayLoadCache>) {
+    constructor(handle?: TWorkerDriverHandle<TAbstractPayLoad> & TMasterDriverHandle<TAbstractPayLoad,TAbstractPayLoadCache> ) {
         this._handle = handle
     }
 
-    public connect(param: TDriverMasterParam, onError?: (error: Error) => void) {
+    public connect(param: TDriverMasterParam, onError?: (error: string) => void) {
         if (this._connected) return
 
-        let dirDeep = vv.toIntPositive(param?.dirDeep) || 4
-        if (dirDeep > 4) {
-            dirDeep = 4
+        const dir = vv.toString(param?.dir)
+        if (vv.isEmpty(dir)) {
+            const errMessage = 'empty param.dir'
+            if (onError) {
+                onError(`on connection : ${errMessage}`)
+                return
+            } else {
+                throw new Error(errMessage)
+            }
+        }
+
+        let countWorker = vv.toIntPositive(param?.countWorker)
+        if (countWorker === undefined) {
+            countWorker = 4
+        } else if (countWorker < 0) {
+            countWorker = 1
+        } else if (countWorker > 1024) {
+            countWorker = 1024
         }
 
         this._param = {
-            dir: vv.toString(param?.dir),
-            dirDeep: dirDeep as any,
-            countWorker: vv.toIntPositive(param?.countWorker) || 8
+            dir: dir,
+            countWorker: countWorker
         }
 
         const workerData: TDriverWorkerData = {
@@ -119,26 +133,36 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
                 data: path.join(this._param.dir, 'data'),
                 index: path.join(this._param.dir, 'index'),
                 process: path.join(this._param.dir, '.process'),
+                wrap: path.join(this._param.dir, 'wrap'),
             },
             handle: {
-                generateKey: this._handle?.generateKey?.toString(),
-                generateFileName: this._handle?.generateFileName?.toString(),
-                generateFileSubdir: this._handle?.generateFileSubdir?.toString(),
-                getFileFromKey: this._handle?.getFileFromKey?.toString(),
-                getSubdirFromKey: this._handle?.getSubdirFromKey?.toString(),
-                getSubdirVerify: undefined
+                getKeyFromPayload: this._handle?.getKeyFromPayload?.toString(),
+                setKeyToPayload: this._handle?.setKeyToPayload?.toString(),
+                getFileNameFromKey: this._handle?.getFileNameFromKey?.toString(),
+                getFileSubdirFromKey: this._handle?.getFileSubdirFromKey?.toString(),
             }
         }
 
-        fs.ensureDirSync(workerData.dir.data)
-        fs.ensureDirSync(workerData.dir.index)
-        fs.ensureDirSync(workerData.dir.process)
+        try {
+            fs.ensureDirSync(workerData.dir.data)
+            fs.ensureDirSync(workerData.dir.index)
+            fs.ensureDirSync(workerData.dir.process)
+            fs.ensureDirSync(workerData.dir.wrap)
 
-        this._handleCache = new DriverHandle()
-        this._handleCache.setCacheDelete(this._handle?.cacheDelete?.toString())
-        this._handleCache.setCacheInsert(this._handle?.cacheInsert?.toString())
-        this._handleCache.setCacheUpdate(this._handle?.cacheUpdate?.toString())
-        this._handleCache.setCacheShrink(this._handle?.cacheShrink?.toString())
+            this._handleCache = new MasterDriverHandle()
+            this._handleCache.setCacheDelete(this._handle?.cacheDelete)
+            this._handleCache.setCacheInsert(this._handle?.cacheInsert)
+            this._handleCache.setCacheUpdate(this._handle?.cacheUpdate)
+            this._handleCache.setCacheShrink(this._handle?.cacheShrink)
+            this._handleCache.setOnResult(this._handle?.onResult)
+        } catch (err) {
+            if (onError) {
+                onError(`on connection : ${(err as Error).message}`)
+                return
+            } else {
+                throw err as Error
+            }
+        }
 
         for (let i = 0; i < this._param.countWorker; i++) {
             const w: TWorker = {
@@ -147,10 +171,18 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
             }
             w.worker.on('message', (result: TResult<TAbstractPayLoad>) => {
                 w.queueCount--
-                if (result.kind === EnumQuery.loadAll && result.target === 'cache') {
+                if (result.kind === EnumQuery.loadAll && result.target === EnumQueryTargetLoad.cache) {
                     this._cache.splice(0)
                     result.stamp.forEach(item => {
-                        this._handleCache.cacheInsert(item, this._cache)
+                        try {
+                            this._handleCache.cacheInsert(item, this._cache)
+                        } catch (err) {
+                            if (onError) {
+                                onError((err as Error).message)
+                            } else {
+                                throw err as Error
+                            }
+                        }
                     })
                     return
                 } else if (result.kind === EnumQuery.insert) {
@@ -158,15 +190,31 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
                         this._handleCache.cacheInsert(result.stamp, this._cache)
                     } catch (err) {
                         if (onError) {
-                            onError(err as Error)
+                            onError((err as Error).message)
                         } else {
                             throw err as Error
                         }
                     }
                 } else if (result.kind === EnumQuery.update) {
-                    this._handleCache.cacheUpdate(result.stamp, this._cache)
+                    try {
+                        this._handleCache.cacheUpdate(result.stamp, this._cache)
+                    } catch (err) {
+                        if (onError) {
+                            onError((err as Error).message)
+                        } else {
+                            throw err as Error
+                        }
+                    }
                 } else if (result.kind === EnumQuery.delete) {
-                    this._handleCache.cacheDelete(result.stamp, this._cache)
+                    try {
+                        this._handleCache.cacheDelete(result.stamp, this._cache)
+                    } catch (err) {
+                        if (onError) {
+                            onError((err as Error).message)
+                        } else {
+                            throw err as Error
+                        }
+                    }
                 }
                 this._resultQueue.push({ result, isUsed: false })
             })
@@ -197,6 +245,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
     public result(queryKey: TQueryKey): TResult<TAbstractPayLoad> {
         const fnd = this._resultQueue.find(f => f.result.key === queryKey)
         if (fnd) {
+            this._handleCache.onResult(fnd)
             fnd.isUsed = true
             return fnd.result
         } else {
@@ -219,7 +268,13 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         })
     }
 
-    public get cache(): any {
+    public get cache(): TAbstractPayLoadCache[] {
         return this._cache
     }
+
+    public get param() : TDriverMasterParam {
+        return this._param
+    }
+
+
 }

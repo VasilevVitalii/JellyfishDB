@@ -1,5 +1,7 @@
-import { TDriverHandle } from "./driverHandle"
+import { TWorkerDriverHandle } from "./worker.handle"
+import { TMasterDriverHandle } from "./master.handle"
 import { DriverMaster } from "./driverMaster"
+import { NumeratorUuid } from "./numerator"
 
 export type TDataKey = string
 
@@ -12,9 +14,21 @@ export enum EnumQuery {
     loadAll = 'loadAll',
 }
 
-export { TDriverHandle } from "./driverHandle"
-export { DriverMaster } from "./driverMaster"
+export enum EnumQueryTargetLoad {
+    my = 'my',
+    cache = 'cache'
+}
 
-export function CreateDriver<TAbstractPayLoad, TAbstractPayLoadCache>(handle?: TDriverHandle<TAbstractPayLoad, TAbstractPayLoadCache>) {
+export { TWorkerDriverHandle } from "./worker.handle"
+export { TMasterDriverHandle } from "./master.handle"
+export { DriverMaster } from "./driverMaster"
+export { TQuery }  from "./driverMaster"
+
+export function CreateDriver<TAbstractPayLoad, TAbstractPayLoadCache>(handle?: TWorkerDriverHandle<TAbstractPayLoad> & TMasterDriverHandle<TAbstractPayLoad, TAbstractPayLoadCache>) {
     return new DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache>(handle)
 }
+
+export function CreateGeneratorId(): NumeratorUuid {
+    return new NumeratorUuid()
+}
+
