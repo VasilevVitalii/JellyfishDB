@@ -2,7 +2,7 @@
 import { workerData, parentPort } from 'worker_threads'
 import * as vv from 'vv-common'
 import * as path from 'path'
-import { TQuery, TQueryKey, TResult, TResultInsert, TResultTemplate, TResultDelete, TResultUpdate, TResultLoadByKey, TResultLoadAll, TResultShrink } from './driverMaster'
+import { TQuery, TQueryKey, TExecResult, TResultInsert, TResultTemplate, TResultDelete, TResultUpdate, TResultLoadByKey, TResultLoadAll, TResultShrink } from './driverMaster'
 import { NumeratorUuid } from './numerator'
 import { WorkerDriverHandle } from './worker.handle'
 import { EnumQuery } from '.'
@@ -88,7 +88,7 @@ function queryQueueProcess(calback: () => void) {
         })
     } else {
         result.error = `unknown kind "${kind}"`
-        parentPort.postMessage(result as TResult<any>)
+        parentPort.postMessage(result as TExecResult<any>)
         queryQueueProcess(calback)
     }
 }

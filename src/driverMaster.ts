@@ -61,14 +61,14 @@ export type TResultLoadAll<TAbstractPayLoad> = TResultTemplate & { kind: EnumQue
 export type TResultLoadByKey<TAbstractPayLoad> = TResultTemplate & { kind: EnumQuery.loadByKey, stamp: TStamp<TAbstractPayLoad>[] }
 export type TResultShrink = TResultTemplate & { kind: EnumQuery.shrink }
 
-export type TResult<TAbstractPayLoad> =
+export type TExecResult<TAbstractPayLoad> =
     TResultInsert<TAbstractPayLoad> |
     TResultUpdate<TAbstractPayLoad> |
     TResultDelete<TAbstractPayLoad> |
     TResultShrink |
     TResultLoadByKey<TAbstractPayLoad> |
     TResultLoadAll<TAbstractPayLoad>
-export type TResultQueue<TAbstractPayLoad> = { result: TResult<TAbstractPayLoad>, isUsed: boolean }
+export type TResultQueue<TAbstractPayLoad> = { result: TExecResult<TAbstractPayLoad>, isUsed: boolean }
 export type TQueryKey = string
 
 type TWorker = { worker: Worker, queueCount: number }
@@ -173,7 +173,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
                 worker: new Worker(path.join(__dirname, './driverWorker.js'), { workerData }),
                 queueCount: 0
             }
-            w.worker.on('message', (result: TResult<TAbstractPayLoad>) => {
+            w.worker.on('message', (result: TExecResult<TAbstractPayLoad>) => {
                 w.queueCount--
                 if (result.kind === EnumQuery.loadAll && result.target === EnumQueryTargetLoad.cache) {
                     this._cache.splice(0)
@@ -248,7 +248,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
     }
 
     /** read commands result */
-    public result(queryKey: TQueryKey): TResult<TAbstractPayLoad> {
+    public result(queryKey: TQueryKey): TExecResult<TAbstractPayLoad> {
         const fnd = this._resultQueue.find(f => f.result.key === queryKey)
         if (fnd) {
             this._handleCache.onResult(fnd)

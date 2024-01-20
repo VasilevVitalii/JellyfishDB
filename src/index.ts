@@ -23,6 +23,7 @@ export { TWorkerDriverHandle } from "./worker.handle"
 export { TMasterDriverHandle } from "./master.handle"
 export { DriverMaster } from "./driverMaster"
 export { TQuery }  from "./driverMaster"
+export { TExecResult }  from "./driverMaster"
 
 export function CreateDriver<TAbstractPayLoad, TAbstractPayLoadCache>(handle?: TWorkerDriverHandle<TAbstractPayLoad> & TMasterDriverHandle<TAbstractPayLoad, TAbstractPayLoadCache>) {
     return new DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache>(handle)
