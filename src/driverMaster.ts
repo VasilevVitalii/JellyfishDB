@@ -176,22 +176,26 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
             w.worker.on('message', (result: TExecResult<TAbstractPayLoad>) => {
                 w.queueCount--
                 if (result.kind === EnumQuery.loadAll && result.target === EnumQueryTargetLoad.cache) {
-                    this._cache.splice(0)
-                    result.stamp.forEach(item => {
-                        try {
-                            this._handleCache.cacheInsert(item, this._cache)
-                        } catch (err) {
-                            if (onError) {
-                                onError((err as Error).message)
-                            } else {
-                                throw err as Error
+                    if (vv.isEmpty(result.error)) {
+                        this._cache.splice(0)
+                        result.stamp.forEach(item => {
+                            try {
+                                this._handleCache.cacheInsert(item, this._cache)
+                            } catch (err) {
+                                if (onError) {
+                                    onError((err as Error).message)
+                                } else {
+                                    throw err as Error
+                                }
                             }
-                        }
-                    })
+                        })
+                    }
                     return
                 } else if (result.kind === EnumQuery.insert) {
                     try {
-                        this._handleCache.cacheInsert(result.stamp, this._cache)
+                        if (vv.isEmpty(result.error)) {
+                            this._handleCache.cacheInsert(result.stamp, this._cache)
+                        }
                     } catch (err) {
                         if (onError) {
                             onError((err as Error).message)
@@ -201,7 +205,9 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
                     }
                 } else if (result.kind === EnumQuery.update) {
                     try {
-                        this._handleCache.cacheUpdate(result.stamp, this._cache)
+                        if (vv.isEmpty(result.error)) {
+                            this._handleCache.cacheUpdate(result.stamp, this._cache)
+                        }
                     } catch (err) {
                         if (onError) {
                             onError((err as Error).message)
@@ -211,7 +217,9 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
                     }
                 } else if (result.kind === EnumQuery.delete) {
                     try {
-                        this._handleCache.cacheDelete(result.stamp, this._cache)
+                        if (vv.isEmpty(result.error)) {
+                            this._handleCache.cacheDelete(result.stamp, this._cache)
+                        }
                     } catch (err) {
                         if (onError) {
                             onError((err as Error).message)
