@@ -1,0 +1,139 @@
+<mxfile host="65bd71144e">
+    <diagram id="PX2iHWLnZ7FmueFJgLCc" name="Page-1">
+        <mxGraphModel dx="2491" dy="1007" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="63" value="&amp;nbsp;jellyfishDb" style="rounded=0;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;dashed=1;verticalAlign=bottom;align=left;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="150" width="730" height="640" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="&amp;nbsp;worker 1" style="rounded=0;whiteSpace=wrap;html=1;align=left;imageVerticalAlign=middle;verticalAlign=top;fillStyle=auto;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="320" width="530" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="10" target="45">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1013" y="385"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="10" value="read/write files" style="shape=process;whiteSpace=wrap;backgroundOutline=1;" vertex="1" parent="1">
+                    <mxGeometry x="810" y="360" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="58" style="edgeStyle=none;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="15" target="51">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="418" y="385"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="15" value="balancer" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="180" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="20" value="&amp;nbsp;worker N" style="rounded=0;whiteSpace=wrap;html=1;align=left;imageVerticalAlign=middle;verticalAlign=top;fillStyle=auto;dashed=1;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="450" width="530" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="47" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="22" target="45">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1013" y="515"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="22" value="read/write files" style="shape=process;whiteSpace=wrap;backgroundOutline=1;" vertex="1" parent="1">
+                    <mxGeometry x="810" y="490" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" value="Your functions for customize driver:&lt;br&gt;&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;i&gt;getKeyFromPayload&lt;/i&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;i&gt;setKeyToPayload&lt;/i&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;i&gt;storage.getFileNameFromKey&lt;/i&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;i&gt;storage.getFileSubdirFromKey&lt;/i&gt;&lt;/li&gt;&lt;/ul&gt;" style="shape=step;perimeter=stepPerimeter;whiteSpace=wrap;fixedSize=1;fillStyle=auto;labelBackgroundColor=none;size=30;shadow=0;rounded=0;flipH=0;align=center;fontStyle=0;html=1;flipV=0;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="580" width="260" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="30" value="Your functions for customize driver:&lt;br&gt;&lt;br&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;onResult&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;cache.onInsert&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;cache.onUpdate&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;cache.onDelete&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;cache.onShrink&lt;/li&gt;&lt;/ul&gt;" style="shape=step;perimeter=stepPerimeter;fixedSize=1;fillStyle=auto;labelBackgroundColor=default;size=30;shadow=0;rounded=0;flipH=1;whiteSpace=wrap;html=1;flipV=1;" vertex="1" parent="1">
+                    <mxGeometry x="800" y="580" width="250" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="34" target="10">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;rounded=0;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="730" y="372.5" width="25" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="38" target="22">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;rounded=0;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="730" y="502.5" width="25" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="56" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="45" target="55">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="57" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="45" target="50">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="795" y="283"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="45" value="2" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;rounded=0;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="1000" y="270" width="25" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="60" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="49" target="15">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="49" value="&lt;span style=&quot;background-color: rgb(42, 37, 47);&quot;&gt;general request queue&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="550" y="180" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="67" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="50" target="64">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="795" y="60"/>
+                            <mxPoint x="102" y="60"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="50" value="&lt;span style=&quot;background-color: rgb(42, 37, 47);&quot;&gt;general response queue&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="720" y="180" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="53" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="51" target="34">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="51" value="&lt;span style=&quot;background-color: rgb(42, 37, 47);&quot;&gt;worker request queue&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="360" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="54" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="52" target="38">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="52" value="&lt;span style=&quot;background-color: rgb(42, 37, 47);&quot;&gt;worker request queue&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="470" y="490" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="55" value="&lt;span style=&quot;background-color: rgb(42, 37, 47);&quot;&gt;cache&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="900" y="180" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="59" style="edgeStyle=none;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="15" target="52">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="418" y="515"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="61" value="1" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;rounded=0;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="640" y="657" width="25" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="62" value="2" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;rounded=0;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;align=center;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="775" y="657.5" width="25" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="65" style="edgeStyle=none;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontFamily=Helvetica;fontSize=12;" edge="1" parent="1" source="64" target="49">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="247" y="100"/>
+                            <mxPoint x="625" y="100"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="64" value="your app" style="rounded=0;whiteSpace=wrap;html=1;shadow=0;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;dashed=1;verticalAlign=bottom;align=right;" vertex="1" parent="1">
+                    <mxGeometry x="30" y="150" width="290" height="640" as="geometry"/>
+                </mxCell>
+                <mxCell id="68" value="&lt;ol&gt;&lt;li&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Create and customize instance of jellyfishDB. For example, with name &lt;i&gt;&lt;b&gt;driver&lt;/b&gt;&lt;/i&gt;.&amp;nbsp;&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Send request to driver by function &lt;b&gt;&lt;i&gt;driver.exec&lt;/i&gt;&lt;/b&gt;. Function return request key. Save this key.&lt;/font&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;font-size: 14px;&quot;&gt;Periodically request the result of the request indicating the sent key by function &lt;b&gt;&lt;i&gt;driver.result&lt;/i&gt;&lt;/b&gt;.&lt;/font&gt;&lt;/li&gt;&lt;/ol&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;shadow=0;dashed=1;labelBackgroundColor=default;sketch=0;fillStyle=auto;fontFamily=Helvetica;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="250" width="270" height="370" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
