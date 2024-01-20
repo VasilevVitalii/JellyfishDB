@@ -191,7 +191,7 @@ function collectTask(stepIdx: number, checkLoad: boolean, callback: () => void) 
                     if (!CompareWithPersonList(listTrue, res.personList)) {
                         errors.push({driverKey: d.key, err: `step${stepIdx}, bad CompareWhithPersonList`})
                     }
-                    if (!CompareWithStorage(listTrue, path.join(d.driver.param.dir, 'data'), path.join(d.driver.param.dir, 'wrap'), d.deep)) {
+                    if (!CompareWithStorage(listTrue, path.join(d.driver.state.param.dir, 'data'), path.join(d.driver.state.param.dir, 'wrap'), d.deep)) {
                         errors.push({driverKey: d.key, err: `step${stepIdx}, bad CompareWithStorage`})
                     }
                 })

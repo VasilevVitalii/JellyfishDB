@@ -16,8 +16,11 @@ export type TDriverMasterParam = {
 }
 
 export type TDataWrap = {
+    /** First Date Modify - date create */
     fdm: string,
+    /** Last Date Modify - date update */
     ldm: string,
+    /** Delete Date Modify - mark as "deleted" */
     ddm: string
 }
 
@@ -100,6 +103,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         this._handle = handle
     }
 
+    /** start driver */
     public connect(param: TDriverMasterParam, onError?: (error: string) => void) {
         if (this._connected) return
 
@@ -231,6 +235,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         })
     }
 
+    /** send commands to driver */
     public exec(query: TQuery<TAbstractPayLoad>): TQueryKey {
         if (!this._connected) {
             throw new Error ('not connected')
@@ -242,6 +247,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         return queueKey
     }
 
+    /** read commands result */
     public result(queryKey: TQueryKey): TResult<TAbstractPayLoad> {
         const fnd = this._resultQueue.find(f => f.result.key === queryKey)
         if (fnd) {
@@ -253,6 +259,7 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         }
     }
 
+    /** stop driver */
     public disconnect(callback: () => void) {
         this._connected = false
         const timer  = new vv.Timer(200, () => {
@@ -268,13 +275,16 @@ export class DriverMaster<TAbstractPayLoad, TAbstractPayLoadCache> {
         })
     }
 
+    /** access to cache (empty array, if cache is not used) */
     public get cache(): TAbstractPayLoadCache[] {
         return this._cache
     }
 
-    public get param() : TDriverMasterParam {
-        return this._param
+    /** access to driver params and check driver states */
+    public get state() : {param: TDriverMasterParam, connected: boolean}  {
+        return {
+            param: this._param,
+            connected: this._connected
+        }
     }
-
-
 }
