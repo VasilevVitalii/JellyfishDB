@@ -18,7 +18,7 @@ npm i jellyfishdb
 ```
 ## Work schema
 
-![work schema](./schema.png)
+![work schema](./schema.svg)
 
 ## Example
 ```typescript
